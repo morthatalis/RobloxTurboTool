@@ -5,7 +5,7 @@ Use visual studio 2022 c# console app .net 6.0
 and put it on release  
 and put the program.cs to program.cs  
 
-ik not really an instruction, but just use the released build
+ik not really an instruction, but just use the released build if you dont understand
 
 # how to use
 use bloxstrap or fishstrap and put the .exe as an intergration
