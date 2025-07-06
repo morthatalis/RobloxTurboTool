@@ -7,7 +7,7 @@ and put the program.cs to program.cs
 
 ik not really an instruction, but just use the released build if you dont understand
 
-# how to use
+# How to use
 use bloxstrap or fishstrap and put the .exe as an intergration
 useful with fishstrap cuz you can enable player and chatlogs,  
 and that automatically is compatible with this program.  
