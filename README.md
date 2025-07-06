@@ -8,7 +8,7 @@ and put the program.cs to program.cs
 ik not really an instruction, but just use the released build if you dont understand
 
 # How to use
-Use bloxstrap or fishstrap and put the .exe as an intergration.
+Use bloxstrap or fishstrap and put the .exe as an intergration.  
 Useful with fishstrap cuz you can enable player and chatlogs,  
 and that automatically is compatible with this program.  
 But you dont actually need to enable that setting.
