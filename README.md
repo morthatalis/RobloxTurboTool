@@ -1,5 +1,6 @@
 # About
 A roblox tool to enhance your roblox experience by extra features and filter internal roblox logs to display useful information.
+But dont worry (kinda legal thing), RobloxTurboTool (rtt) does not look at memmory of any programs, rtt is not a debugger, rtt doesnt work like exploits, rtt will never be detected, besides if roblox looks at what programs are open, rtt uses roblox logs for the information it gets, rtt doesnt use any external libraries to work, rtt doesnt collect any data nor sends any data online and rtt will always stay opensource.
 # Building
 Use visual studio 2022 c# console app .net 6.0  
 and put it on release  
