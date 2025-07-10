@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net.Http;
 using System.Diagnostics;
+using System.Net.NetworkInformation;
 
 class Program
 {
@@ -19,7 +20,10 @@ class Program
     static readonly string targetProcessName = "RobloxPlayerBeta";
     static string localid = "";
     static string gameid = "";
+    static string jobid = "";
     static bool allowrejoin = false;
+    static bool jobrejoin = false;
+    static bool bexamp = false;
     static FileInfo? logFileInfo = null;
     static string currentLogFile = "";
     static long lastPosition = 0;
@@ -110,7 +114,7 @@ class Program
         {
             while (true)
             {
-               
+                Process[] processes = Process.GetProcessesByName(targetProcessName);
                 try
                 {
                     var fileInfoOnDisk = new FileInfo(currentLogFile);
@@ -206,9 +210,11 @@ class Program
                             }
                             else if (line.Contains("[FLog::GameJoinLoadTime] Report game_join_loadtime:"))
                             {
+                                //https:// www.roblox.com/games/start?placeId=placeid&gameInstanceId=instanceid
                                 string marker = "[FLog::GameJoinLoadTime] Report game_join_loadtime:";
                                 string placeid = "placeid:";
                                 string userid = "userid:";
+                                
                                 int index = line.IndexOf(marker);
                                 int placeidindex = line.IndexOf(placeid);
                                 int useridindex = line.IndexOf(userid);
@@ -229,8 +235,20 @@ class Program
                                     localid = cleaneduserid;
                                     consolejoininfo = consolejoininfo + ", UserID:" + cleaneduserid;
                                 }
+                                
                                 Console.WriteLine(consolejoininfo);
 
+                            }
+                            else if (line.Contains("Joining game '")) {
+                                string ftjobid = "Joining game '";
+                                int jobidindex = line.IndexOf("Joining game '");
+                                string cleanedjobid;
+                                if (jobidindex >= 0)
+                                {
+                                    cleanedjobid = line.Substring(jobidindex + (ftjobid.Length - 1)).TrimStart();
+                                    cleanedjobid = ExtractBetweenMarkers(cleanedjobid, '\'', '\'');
+                                    jobid = cleanedjobid;
+                                }
                             }
                             else if (line.Contains("[FLog::Network] UDMUX Address"))
                             {
@@ -368,7 +386,22 @@ class Program
                             else if (line.Contains("[FLog::Network] Client:Disconnect"))
                             {
                                 Console.WriteLine("Client got disconnected");
-                                Console.WriteLine(localid);
+                            }
+                            else if (line.Contains("[FLog::Network] Sending disconnect with reason: 277"))
+                            {
+                                Console.WriteLine("code 277: lost connection, sending rejoin");
+                                foreach (Process proc in processes)
+                                {
+                                    Console.WriteLine(gameid);
+                                    Console.WriteLine($"Attempting to close process with ID: {proc.Id}");
+                                    proc.Kill();
+                                    Console.WriteLine($"{targetProcessName} has closed.");
+
+                                    Process.Start(new ProcessStartInfo("cmd", $"/c start roblox://placeId={gameid}") { CreateNoWindow = true });
+
+                                    Environment.Exit(0);
+                                    break;
+                                }
                             }
                         }
                         lastPosition = fs.Position;
@@ -386,6 +419,7 @@ class Program
         }
         static void whiletwo()
         {
+            
             while (true)
             {
                 string command = Console.ReadLine();
@@ -397,14 +431,11 @@ class Program
                 {
                     allowrejoin = true;
                 }
-                Process[] processes = Process.GetProcessesByName(targetProcessName);
-                if (processes.Length == 0)
+                else if (command.ToLower() == "job rejoin")
                 {
-                    Console.WriteLine($"{targetProcessName} has closed.");
-                    Environment.Exit(0);
-                    break;
+                    jobrejoin = true;
                 }
-
+                Process[] processes = Process.GetProcessesByName(targetProcessName);
                 if (allowrejoin == true)
                 {
                     foreach (Process proc in processes)
@@ -418,6 +449,20 @@ class Program
                        
                         Environment.Exit(0);
                         break;
+                    }
+                } else if (jobrejoin == true)
+                {
+                    foreach (Process proc in processes)
+                    {
+                        Console.WriteLine(gameid);
+                    Console.WriteLine($"Attempting to close process with ID: {proc.Id}");
+                    proc.Kill();
+                    Console.WriteLine($"{targetProcessName} has closed.");
+
+                    Process.Start(new ProcessStartInfo("cmd", $"/c start https://www.roblox.com/games/start?placeId={gameid}" + "&gameInstanceId="+jobid) { CreateNoWindow = true });
+                    
+                    Environment.Exit(0);
+                    break;
                     }
                 }
             }
