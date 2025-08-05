@@ -15,4 +15,4 @@ ik not really an instruction, but just use the released build if you dont unders
 Use bloxstrap or fishstrap and put the .exe as an intergration.  
 Useful with fishstrap cuz you can enable player and chatlogs,  
 and that automatically is compatible with this program.  
-But you dont actually need to enable that setting.
+But you dont need to enable that setting.
