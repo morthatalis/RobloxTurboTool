@@ -306,8 +306,10 @@ class Program
                                             if (jobId1 == jobid)
                                             {
                                                 Console.WriteLine("Server Found:");
-                                                Console.WriteLine(server?.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
-                                                return;
+                                                 Console.WriteLine(server?.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+                                                await Task.Delay(5000); // not a *good* solution but otherwise this whole program wont work.
+                                                break; //added this cuz i forgot this lol
+                                                
                                             }
                                         }
 
