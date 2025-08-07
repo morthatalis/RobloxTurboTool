@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using System.Net.Http;
 using System.Diagnostics;
 using System.Net.NetworkInformation;
+using System.Text.Json.Nodes;
+using System.Text.Json;
 
 class Program
 {
@@ -18,12 +20,13 @@ class Program
     const uint TOPMOST_FLAGS = SWP_NOMOVE | SWP_NOSIZE;
     static bool iomessage = false;
     static readonly string targetProcessName = "RobloxPlayerBeta";
+    static readonly HttpClient client = new HttpClient();
     static string localid = "";
     static string gameid = "";
     static string jobid = "";
     static bool allowrejoin = false;
     static bool jobrejoin = false;
-    static bool bexamp = false;
+    static bool exit = false;
     static FileInfo? logFileInfo = null;
     static string currentLogFile = "";
     static long lastPosition = 0;
@@ -53,7 +56,6 @@ class Program
         Console.Title = "Roblox TurboTool";
         Console.WriteLine($"[Info] Watching folder: {logDirectory}\n");
 
-        
 
         // Wait for recent enough log file (by LastWriteTime)
         while (true)
@@ -110,7 +112,7 @@ class Program
         await Task.WhenAll(task1, task2);
         await Task.Delay(-1);
 
-        static void whileone()
+        static async void whileone()
         {
             while (true)
             {
@@ -135,9 +137,9 @@ class Program
                                 string marker = "[ExpChat/mountClientApp (Trace)] - ";
 
                                 int index = line.IndexOf(marker);
-                                if (line.Contains("Player Removed: ") && line.Contains(localid))
+                                if (line.Contains("Player Removed: " + localid))
                                 {
-                                    Console.WriteLine("Player Left game, but still print, incase of any attempts to curb logging somehow.\n\n");
+                                    Console.WriteLine("LocalPlayer Left game.");
                                 }
                                 if (index >= 0)
                                 {
@@ -225,7 +227,7 @@ class Program
                                     cleanedplaceid = line.Substring(placeidindex + (placeid.Length - 1)).TrimStart();
                                     cleanedplaceid = ExtractBetweenMarkers(cleanedplaceid, ':', ',');
                                     gameid = cleanedplaceid;
-                                    consolejoininfo = consolejoininfo + ", PlaceID:" + cleanedplaceid;
+                                    consolejoininfo = consolejoininfo + ", PlaceID: " + cleanedplaceid;
                                 }
                                 string cleaneduserid;
                                 if (useridindex >= 0)
@@ -233,7 +235,7 @@ class Program
                                     cleaneduserid = line.Substring(useridindex + (userid.Length - 1)).TrimStart();
                                     cleaneduserid = ExtractBetweenMarkers(cleaneduserid, ':', ',');
                                     localid = cleaneduserid;
-                                    consolejoininfo = consolejoininfo + ", UserID:" + cleaneduserid;
+                                    consolejoininfo = consolejoininfo + ", UserID: " + cleaneduserid;
                                 }
                                 
                                 Console.WriteLine(consolejoininfo);
@@ -246,7 +248,8 @@ class Program
                                 if (jobidindex >= 0)
                                 {
                                     cleanedjobid = line.Substring(jobidindex + (ftjobid.Length - 1)).TrimStart();
-                                    cleanedjobid = ExtractBetweenMarkers(cleanedjobid, '\'', '\'');
+                                    cleanedjobid = ExtractBetweenMarkers(cleanedjobid, '\'', ' ');
+                                    cleanedjobid = cleanedjobid.Substring(0, cleanedjobid.Length-1);
                                     jobid = cleanedjobid;
                                 }
                             }
@@ -273,9 +276,57 @@ class Program
                                     //doesnt work for some reason, and i dont really expect this to get fixed because
                                     //who has a use for the port? and also if you're really that guy
                                     //just do it yourself.
+                                    //lol my past me reasoning my skill issue
                                 }
-                                Console.WriteLine(consolejoininfo);
-                            }
+                                Console.Write(consolejoininfo + ", JobID: " + jobid + "\n");
+                                await Task.Delay(5000);
+                                try
+                                {
+                                    int limit = 100;
+                                    int cursorCount = 0;
+                                    string? cursor = null;
+
+                                    while (cursorCount < 10) // Avoid infinite loop
+                                    {
+                                        string url = $"https://games.roblox.com/v1/games/{gameid}/servers/Public?limit={limit}";
+                                        if (!string.IsNullOrEmpty(cursor))
+                                            url += $"&cursor={cursor}";
+
+                                        HttpResponseMessage response = await client.GetAsync(url);
+                                        response.EnsureSuccessStatusCode();
+
+                                        string responseBody = await response.Content.ReadAsStringAsync();
+
+                                        JsonObject json = JsonNode.Parse(responseBody)?.AsObject();
+                                        JsonArray servers = json?["data"]?.AsArray();
+
+                                        foreach (JsonNode? server in servers)
+                                        {
+                                            string? jobId1 = server?["id"]?.ToString();
+                                            if (jobId1 == jobid)
+                                            {
+                                                Console.WriteLine("Server Found:");
+                                                Console.WriteLine(server?.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+                                                return;
+                                            }
+                                        }
+
+                                        cursor = json?["nextPageCursor"]?.ToString();
+                                        if (string.IsNullOrEmpty(cursor))
+                                            break;
+
+                                        cursorCount++;
+                                    }
+
+                                    Console.WriteLine("Server with JobId not found.");
+                                }
+                                catch (Exception e)
+                                {
+                                    Console.WriteLine($"Error: {e.Message}");
+                                }
+                            
+
+                        }
                             else if (line.Contains("[FLog::Output]"))
                             {
                                 string flop = "[FLog::Output] ";
@@ -435,6 +486,10 @@ class Program
                 {
                     jobrejoin = true;
                 }
+                else if (command.ToLower() == "exit")
+                {
+                    exit = true;
+                }
                 Process[] processes = Process.GetProcessesByName(targetProcessName);
                 if (allowrejoin == true)
                 {
@@ -463,6 +518,18 @@ class Program
                     
                     Environment.Exit(0);
                     break;
+                    }
+                }
+                else if (exit == true)
+                {
+                    foreach (Process proc in processes)
+                    {
+                        Console.WriteLine(gameid);
+                        Console.WriteLine($"Attempting to close process with ID: {proc.Id}");
+                        proc.Kill();
+                        Console.WriteLine($"{targetProcessName} has closed.");
+                        Environment.Exit(0);
+                        break; //incase lol
                     }
                 }
             }
