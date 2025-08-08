@@ -11,6 +11,8 @@ using System.Diagnostics;
 using System.Net.NetworkInformation;
 using System.Text.Json.Nodes;
 using System.Text.Json;
+using System.ComponentModel.Design;
+using System.ComponentModel.DataAnnotations;
 
 class Program
 {
@@ -21,6 +23,7 @@ class Program
     static bool iomessage = false;
     static readonly string targetProcessName = "RobloxPlayerBeta";
     static readonly HttpClient client = new HttpClient();
+    static bool printbool = false;
     static string localid = "";
     static string gameid = "";
     static string jobid = "";
@@ -134,24 +137,28 @@ class Program
 
                             if (line.Contains("[ExpChat/mountClientApp (Trace)]"))
                             {
+                                Console.ForegroundColor = ConsoleColor.Green;
+                                string timestamp = ExtractBetweenMarkers(line, 'T', '.');
+                                printbool = true;
                                 string marker = "[ExpChat/mountClientApp (Trace)] - ";
 
                                 int index = line.IndexOf(marker);
                                 if (line.Contains("Player Removed: " + localid))
                                 {
-                                    Console.WriteLine("LocalPlayer Left game.");
+                                    Console.WriteLine(timestamp + " LocalPlayer Left game.");
                                 }
                                 if (index >= 0)
                                 {
                                     // Remove everything before and including marker, then trim leading spaces
                                     string cleaned = line.Substring(index + marker.Length).TrimStart();
-                                    Console.WriteLine(cleaned);
+                                    Console.WriteLine(timestamp + " " + cleaned);
                                 }
                                 else
                                 {
                                     // marker not found, use original line
                                     Console.WriteLine(line);
                                 }
+                                Console.ResetColor();
                             }
                             else if (line.Contains("[ExpChat/mountClientApp (Debug)]"))
                             {
@@ -159,13 +166,14 @@ class Program
                                 {
                                     if (!iomessage)
                                     {
+                                        string timestamp = ExtractBetweenMarkers(line, 'T', '.');
                                         string marker = "Incoming MessageReceived Status: Success Text:";
 
                                         int index = line.IndexOf(marker);
                                         if (index >= 0)
                                         {
                                             string cleaned = line.Substring(index + marker.Length).TrimStart();
-                                            Console.WriteLine("Player messaged: " + cleaned);
+                                            Console.WriteLine(timestamp + " Player messaged: " + cleaned);
                                         }
                                         else
                                         {
@@ -179,13 +187,14 @@ class Program
                                 }
                                 else if (line.Contains("Outgoing SendingMessage Status: Sending Text: "))
                                 {
+                                    string timestamp = ExtractBetweenMarkers(line, 'T', '.');
                                     string marker = "Outgoing SendingMessage Status: Sending Text: ";
 
                                     int index = line.IndexOf(marker);
                                     if (index >= 0)
                                     {
                                         string cleaned = line.Substring(index + marker.Length).TrimStart();
-                                        Console.WriteLine("LocalPlayer sent: " + cleaned);
+                                        Console.WriteLine(timestamp + " LocalPlayer sent: " + cleaned);
                                         iomessage = true;
                                     }
                                     else
@@ -196,27 +205,31 @@ class Program
                                 }
                                 else
                                 {
+                                    Console.ForegroundColor = ConsoleColor.Green;
+                                    string timestamp = ExtractBetweenMarkers(line, 'T', '.');
                                     string marker = "[ExpChat/mountClientApp (Debug)] - ";
 
                                     int index = line.IndexOf(marker);
                                     if (index >= 0)
                                     {
                                         string cleaned = line.Substring(index + marker.Length).TrimStart();
-                                        Console.WriteLine(cleaned);
+                                        Console.WriteLine(timestamp + " "+ cleaned);
                                     }
                                     else
                                     {
                                         Console.WriteLine(line);
                                     }
+                                    Console.ResetColor();
                                 }
                             }
                             else if (line.Contains("[FLog::GameJoinLoadTime] Report game_join_loadtime:"))
                             {
+                                string timestamp = ExtractBetweenMarkers(line, 'T', '.');
                                 //https:// www.roblox.com/games/start?placeId=placeid&gameInstanceId=instanceid
                                 string marker = "[FLog::GameJoinLoadTime] Report game_join_loadtime:";
                                 string placeid = "placeid:";
                                 string userid = "userid:";
-                                
+
                                 int index = line.IndexOf(marker);
                                 int placeidindex = line.IndexOf(placeid);
                                 int useridindex = line.IndexOf(userid);
@@ -237,11 +250,13 @@ class Program
                                     localid = cleaneduserid;
                                     consolejoininfo = consolejoininfo + ", UserID: " + cleaneduserid;
                                 }
-                                
-                                Console.WriteLine(consolejoininfo);
+
+                                Console.WriteLine(timestamp +" "+ consolejoininfo);
 
                             }
-                            else if (line.Contains("Joining game '")) {
+                            else if (line.Contains("Joining game '"))
+                            {
+
                                 string ftjobid = "Joining game '";
                                 int jobidindex = line.IndexOf("Joining game '");
                                 string cleanedjobid;
@@ -249,12 +264,13 @@ class Program
                                 {
                                     cleanedjobid = line.Substring(jobidindex + (ftjobid.Length - 1)).TrimStart();
                                     cleanedjobid = ExtractBetweenMarkers(cleanedjobid, '\'', ' ');
-                                    cleanedjobid = cleanedjobid.Substring(0, cleanedjobid.Length-1);
+                                    cleanedjobid = cleanedjobid.Substring(0, cleanedjobid.Length - 1);
                                     jobid = cleanedjobid;
                                 }
                             }
                             else if (line.Contains("[FLog::Network] UDMUX Address"))
                             {
+                                string timestamp = ExtractBetweenMarkers(line, 'T', '.');
                                 string placeid = "UDMUX Address =";
                                 string port = "Port =";
                                 int placeidindex = line.IndexOf(placeid);
@@ -278,13 +294,14 @@ class Program
                                     //just do it yourself.
                                     //lol my past me reasoning my skill issue
                                 }
-                                Console.Write(consolejoininfo + ", JobID: " + jobid + "\n");
+                                Console.Write(timestamp +" "+ consolejoininfo + ", JobID: " + jobid + "\n");
                                 await Task.Delay(5000);
                                 try
                                 {
                                     int limit = 100;
                                     int cursorCount = 0;
                                     string? cursor = null;
+                                    bool isdone = false;
 
                                     while (cursorCount < 10) // Avoid infinite loop
                                     {
@@ -305,11 +322,12 @@ class Program
                                             string? jobId1 = server?["id"]?.ToString();
                                             if (jobId1 == jobid)
                                             {
-                                                Console.WriteLine("Server Found:");
-                                                 Console.WriteLine(server?.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+                                                Console.WriteLine("Server data fetched:");
+                                                Console.WriteLine(server?.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
                                                 await Task.Delay(5000); // not a *good* solution but otherwise this whole program wont work.
-                                                break; //added this cuz i forgot this lol
-                                                
+                                                isdone = true;
+                                                break;
+
                                             }
                                         }
 
@@ -319,18 +337,19 @@ class Program
 
                                         cursorCount++;
                                     }
+                                    if (isdone == false) { Console.WriteLine("Server with JobId not found."); }
 
-                                    Console.WriteLine("Server with JobId not found.");
                                 }
                                 catch (Exception e)
                                 {
                                     Console.WriteLine($"Error: {e.Message}");
                                 }
-                            
 
-                        }
+
+                            }
                             else if (line.Contains("[FLog::Output]"))
                             {
+                                
                                 string flop = "[FLog::Output] ";
                                 string info = "Info: ";
 
@@ -354,19 +373,41 @@ class Program
                                 */
                                 if (line.Contains(flop + info))
                                 {
-                                    string marker = info;
-
-                                    int index = line.IndexOf(marker);
-                                    if (index >= 0)
+                                    string timestamp = ExtractBetweenMarkers(line, 'T', '.');
+                                    Console.ForegroundColor = ConsoleColor.DarkCyan;
+                                    if (line.Contains("Stack End"))
                                     {
-                                        // Remove everything before and including marker, then trim leading spaces
-                                        string cleaned = line.Substring(index + marker.Length).TrimStart();
-                                        Console.WriteLine(cleaned);
+                                        string marker = info;
+
+                                        int index = line.IndexOf(marker);
+                                        if (index >= 0)
+                                        {
+                                            // Remove everything before and including marker, then trim leading spaces
+                                            string cleaned = line.Substring(index + marker.Length).TrimStart();
+                                            Console.WriteLine(timestamp + " Info: " + cleaned + "\n"); //just incase
+                                        }
+                                        else
+                                        {
+                                            // marker not found, use original line
+                                            Console.WriteLine(line);
+                                        }
                                     }
                                     else
                                     {
-                                        // marker not found, use original line
-                                        Console.WriteLine(line);
+                                        string marker = info;
+                                        
+                                        int index = line.IndexOf(marker);
+                                        if (index >= 0)
+                                        {
+                                            // Remove everything before and including marker, then trim leading spaces
+                                            string cleaned = line.Substring(index + marker.Length).TrimStart();
+                                            Console.WriteLine(timestamp + " Info: " + cleaned);
+                                        }
+                                        else
+                                        {
+                                            // marker not found, use original line
+                                            Console.WriteLine(line);
+                                        }
                                     }
 
                                     /* else if (line.Contains(flop + warn))
@@ -386,11 +427,33 @@ class Program
                                         Console.WriteLine(line);
                                     }
                                 } */
+                                    Console.ResetColor();
                                 }
-
+                                else if (line.Contains(flop) && printbool == true)
+                                {
+                                    if (!line.Contains("[tid:") && !line.Contains("Settings Date"))
+                                    {
+                                        string marker = flop;
+                                        string timestamp = ExtractBetweenMarkers(line, 'T', '.');
+                                        int index = line.IndexOf(marker);
+                                        if (index >= 0)
+                                        {
+                                            // Remove everything before and including marker, then trim leading spaces
+                                            string cleaned = line.Substring(index + marker.Length).TrimStart();
+                                            Console.WriteLine(timestamp + " Output: " + cleaned);
+                                        }
+                                        else
+                                        {
+                                            // marker not found, use original line
+                                            Console.WriteLine(line);
+                                        }
+                                    }
+                                }
                             }
                             else if (line.Contains("[FLog::Error] Error: "))
                             {
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                string timestamp = ExtractBetweenMarkers(line, 'T', '.');
                                 string marker = "[FLog::Error] Error: ";
 
                                 int index = line.IndexOf(marker);
@@ -398,7 +461,7 @@ class Program
                                 {
                                     // Remove everything before and including marker, then trim leading spaces
                                     string cleaned = line.Substring(index + marker.Length).TrimStart();
-                                    Console.WriteLine(cleaned);
+                                    Console.WriteLine(timestamp + " Error: " + cleaned);
                                 }
                                 else
                                 {
@@ -411,9 +474,12 @@ class Program
 
                                 }
                                 */
+                                Console.ResetColor();
                             }
                             else if (line.Contains("[FLog::Warning] Warning: "))
                             {
+                                string timestamp = ExtractBetweenMarkers(line, 'T', '.');
+                                Console.ForegroundColor = ConsoleColor.Yellow;
                                 string marker = "[FLog::Warning] Warning: ";
 
                                 int index = line.IndexOf(marker);
@@ -421,7 +487,7 @@ class Program
                                 {
                                     // Remove everything before and including marker, then trim leading spaces
                                     string cleaned = line.Substring(index + marker.Length).TrimStart();
-                                    Console.WriteLine(cleaned);
+                                    Console.WriteLine(timestamp + " Warning: " + cleaned);
                                 }
                                 else
                                 {
@@ -434,11 +500,13 @@ class Program
 
                                 }
                                 */
+                                Console.ResetColor();
                             }
                             //[FLog::Network] Client:Disconnect
                             else if (line.Contains("[FLog::Network] Client:Disconnect"))
                             {
                                 Console.WriteLine("Client got disconnected");
+                                printbool = false;
                             }
                             else if (line.Contains("[FLog::Network] Sending disconnect with reason: 277"))
                             {
