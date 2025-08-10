@@ -13,6 +13,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json;
 using System.ComponentModel.Design;
 using System.ComponentModel.DataAnnotations;
+using System.Runtime.CompilerServices;
 
 class Program
 {
@@ -23,10 +24,13 @@ class Program
     static bool iomessage = false;
     static readonly string targetProcessName = "RobloxPlayerBeta";
     static readonly HttpClient client = new HttpClient();
+    static readonly string version = "RTT production V1.4.0";
+    static bool skip = false;
     static bool printbool = false;
     static string localid = "";
     static string gameid = "";
     static string jobid = "";
+    static string universeid = "";
     static bool allowrejoin = false;
     static bool jobrejoin = false;
     static bool exit = false;
@@ -57,45 +61,72 @@ class Program
 
         var logDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Roblox", "logs");
         Console.Title = "Roblox TurboTool";
-        Console.WriteLine($"[Info] Watching folder: {logDirectory}\n");
-
-
+        Console.WriteLine($"[Info] Watching folder: logfolder\n");
+        Console.WriteLine($"[Info] enter 'skip' to use the newest file found\n");
+        Task twhile1 = Task.Run(while1);
+        Task twhile2 = Task.Run(while2);
+        
+        await Task.WhenAll(twhile1, twhile2);
         // Wait for recent enough log file (by LastWriteTime)
+         async Task while1() { 
         while (true)
         {
+                
             try
-            {
-                logFileInfo = new DirectoryInfo(logDirectory)
-                    .GetFiles("*.log")
-                    .Where(f =>
-                        f.Name.Contains("Player", StringComparison.OrdinalIgnoreCase) &&
-                        f.LastWriteTime <= DateTime.Now)
-                    .OrderByDescending(f => f.LastWriteTime)
-                    .FirstOrDefault();
-               
-                if (logFileInfo != null && logFileInfo.LastWriteTime.AddSeconds(15) > DateTime.Now)
                 {
-                    Console.WriteLine($"[Info] Found recent log: {logFileInfo.Name}");
-                    currentLogFile = logFileInfo.FullName;
+                  logFileInfo = new DirectoryInfo(logDirectory)
+                  .GetFiles("*.log")
+                  .Where(f =>
+                  f.Name.Contains("Player", StringComparison.OrdinalIgnoreCase) &&
+                  f.LastWriteTime <= DateTime.Now)
+                  .OrderByDescending(f => f.LastWriteTime)
+                  .FirstOrDefault();
+
+                    if (logFileInfo != null && logFileInfo.LastWriteTime.AddSeconds(15) > DateTime.Now)
+                    {
+                        Console.WriteLine($"[Info] Found recent log: {logFileInfo.Name}, press enter to continue");
+                        currentLogFile = logFileInfo.FullName;
+                        skip = true;
+                        break;
+                    }
+                    if (skip == true)
+                    {
+                        currentLogFile = logFileInfo.FullName;
+                        break;
+                    }
+                    var newest = logFileInfo != null ? logFileInfo.Name : "<none>";
+                    Console.WriteLine($"[Wait] No recent log found (newest: {newest}), retrying...");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Error] {ex.Message}");
+                }
+                
+                await Task.Delay(1000);
+            }
+        }
+        static async Task while2()
+        {
+            while (true)
+            {
+                string command = Console.ReadLine();
+                if (command.ToLower() == "skip")
+                {
+                    skip = true;
+                    break;
+                } else if (skip == true)
+                {
                     break;
                 }
-
-                var newest = logFileInfo != null ? logFileInfo.Name : "<none>";
-                Console.WriteLine($"[Wait] No recent log found (newest: {newest}), retrying...");
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[Error] {ex.Message}");
-            }
-
-            await Task.Delay(1000);
         }
 
 
-
-        Console.Clear();
+            Console.Clear();
+        await Task.Delay(1000);
+        Console.WriteLine("Running" + version);
         Console.WriteLine($"\n[Monitor] Now Displaying Log: {Path.GetFileName(currentLogFile)}\n\n");
-        Console.WriteLine("Enter 'Rejoin' to... rejoin your current game once you join.");
+        Console.WriteLine("Enter 'help' to get a list of commands (and sometimes an explaination).\n");
         static string ExtractBetweenMarkers(string text, char startMarker, char endMarker)
         {
             int startIndex = text.IndexOf(startMarker);
@@ -229,10 +260,12 @@ class Program
                                 string marker = "[FLog::GameJoinLoadTime] Report game_join_loadtime:";
                                 string placeid = "placeid:";
                                 string userid = "userid:";
+                                string universeidtext = ", universeid:";
 
                                 int index = line.IndexOf(marker);
                                 int placeidindex = line.IndexOf(placeid);
                                 int useridindex = line.IndexOf(userid);
+                                int universeidindex = line.IndexOf(universeidtext);
                                 string consolejoininfo = "\nJoining place";
                                 string cleanedplaceid = "";
                                 if (placeidindex >= 0)
@@ -249,6 +282,14 @@ class Program
                                     cleaneduserid = ExtractBetweenMarkers(cleaneduserid, ':', ',');
                                     localid = cleaneduserid;
                                     consolejoininfo = consolejoininfo + ", UserID: " + cleaneduserid;
+                                }
+                                string cleaneduniverseid;
+                                if (universeidindex >= 0)
+                                {
+                                    cleaneduniverseid = line.Substring(universeidindex + (universeidtext.Length-1)).TrimStart();
+                                    cleaneduniverseid = ExtractBetweenMarkers(cleaneduniverseid, ':', ',');
+                                    universeid = cleaneduniverseid;
+                                    consolejoininfo = consolejoininfo + ", UniverseID: " + cleaneduniverseid;
                                 }
 
                                 Console.WriteLine(timestamp +" "+ consolejoininfo);
@@ -295,7 +336,7 @@ class Program
                                     //lol my past me reasoning my skill issue
                                 }
                                 Console.Write(timestamp +" "+ consolejoininfo + ", JobID: " + jobid + "\n");
-                                await Task.Delay(5000);
+                                
                                 try
                                 {
                                     int limit = 100;
@@ -308,6 +349,7 @@ class Program
                                         string url = $"https://games.roblox.com/v1/games/{gameid}/servers/Public?limit={limit}";
                                         if (!string.IsNullOrEmpty(cursor))
                                             url += $"&cursor={cursor}";
+                                        await Task.Delay(1000);
 
                                         HttpResponseMessage response = await client.GetAsync(url);
                                         response.EnsureSuccessStatusCode();
@@ -324,7 +366,7 @@ class Program
                                             {
                                                 Console.WriteLine("Server data fetched:");
                                                 Console.WriteLine(server?.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
-                                                await Task.Delay(5000); // not a *good* solution but otherwise this whole program wont work.
+                                                await Task.Delay(1500); // not a *good* solution but otherwise this wont work.
                                                 isdone = true;
                                                 break;
 
@@ -538,7 +580,7 @@ class Program
                 
             }
         }
-        static void whiletwo()
+        static async Task whiletwo()
         {
             
             while (true)
@@ -560,7 +602,45 @@ class Program
                 {
                     exit = true;
                 }
-                Process[] processes = Process.GetProcessesByName(targetProcessName);
+                else if (command.ToLower() == "list places") {
+
+                    try
+                    {
+                        bool isdone = false;
+
+                        string url = $"https://develop.roblox.com/v1/universes/{universeid}/places";
+
+                        HttpResponseMessage response = await client.GetAsync(url);
+                        response.EnsureSuccessStatusCode();
+
+                        string responseBody = await response.Content.ReadAsStringAsync();
+
+                        using JsonDocument doc = JsonDocument.Parse(responseBody);
+
+                        // "data" is the array of places
+                        JsonElement dataArray = doc.RootElement.GetProperty("data");
+
+                        foreach (JsonElement place in dataArray.EnumerateArray())
+                        {
+                                Console.WriteLine(place.ToString());
+                                isdone = true; 
+                            
+                        }
+                        if (!isdone)
+                        {
+                            Console.WriteLine("Server with JobId not found.");
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"Error: {e.Message}");
+                    }
+
+                } else if (command.ToLower() == "help")
+                {
+                    Console.WriteLine("help, rejoin (using gameid), job rejoin (means server rejoin), list places (places from the universeid), exit (to exit roblox and program)");
+                }
+                    Process[] processes = Process.GetProcessesByName(targetProcessName);
                 if (allowrejoin == true)
                 {
                     foreach (Process proc in processes)
