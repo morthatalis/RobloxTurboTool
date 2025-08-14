@@ -24,13 +24,14 @@ class Program
     static bool iomessage = false;
     static readonly string targetProcessName = "RobloxPlayerBeta";
     static readonly HttpClient client = new HttpClient();
-    static readonly string version = "RTT production V1.4.0";
+    static readonly string version = " RTT production V1.5.0";
     static bool skip = false;
     static bool printbool = false;
     static string localid = "";
     static string gameid = "";
     static string jobid = "";
     static string universeid = "";
+    static List<string> playerlist = new() { };
     static bool allowrejoin = false;
     static bool jobrejoin = false;
     static bool exit = false;
@@ -52,6 +53,7 @@ class Program
 
     static async Task Main()
     {
+        
         // Make console always on top
         var handle = GetConsoleWindow();
         if (handle != IntPtr.Zero)
@@ -126,7 +128,7 @@ class Program
         await Task.Delay(1000);
         Console.WriteLine("Running" + version);
         Console.WriteLine($"\n[Monitor] Now Displaying Log: {Path.GetFileName(currentLogFile)}\n\n");
-        Console.WriteLine("Enter 'help' to get a list of commands (and sometimes an explaination).\n");
+        Console.WriteLine("Enter 'help' to get a list of commands (and sometimes an explanation).\n");
         static string ExtractBetweenMarkers(string text, char startMarker, char endMarker)
         {
             int startIndex = text.IndexOf(startMarker);
@@ -168,6 +170,7 @@ class Program
 
                             if (line.Contains("[ExpChat/mountClientApp (Trace)]"))
                             {
+                                //[ExpChat/mountClientApp (Trace)] - Player added: must201234 1598581117
                                 Console.ForegroundColor = ConsoleColor.Green;
                                 string timestamp = ExtractBetweenMarkers(line, 'T', '.');
                                 printbool = true;
@@ -183,6 +186,15 @@ class Program
                                     // Remove everything before and including marker, then trim leading spaces
                                     string cleaned = line.Substring(index + marker.Length).TrimStart();
                                     Console.WriteLine(timestamp + " " + cleaned);
+                                    if (cleaned.Contains("Player added:"))
+                                    {
+                                        string plrlistentry = cleaned.Substring(13).TrimStart();
+                                        playerlist.Add(plrlistentry);
+                                    } else if (cleaned.Contains("Player removed:"))
+                                    {
+                                        string plrlistentry = cleaned.Substring(16).TrimStart();
+                                        playerlist.Remove(plrlistentry);
+                                    }
                                 }
                                 else
                                 {
@@ -244,7 +256,7 @@ class Program
                                     if (index >= 0)
                                     {
                                         string cleaned = line.Substring(index + marker.Length).TrimStart();
-                                        Console.WriteLine(timestamp + " "+ cleaned);
+                                        Console.WriteLine(timestamp + " " + cleaned);
                                     }
                                     else
                                     {
@@ -286,13 +298,13 @@ class Program
                                 string cleaneduniverseid;
                                 if (universeidindex >= 0)
                                 {
-                                    cleaneduniverseid = line.Substring(universeidindex + (universeidtext.Length-1)).TrimStart();
+                                    cleaneduniverseid = line.Substring(universeidindex + (universeidtext.Length - 1)).TrimStart();
                                     cleaneduniverseid = ExtractBetweenMarkers(cleaneduniverseid, ':', ',');
                                     universeid = cleaneduniverseid;
                                     consolejoininfo = consolejoininfo + ", UniverseID: " + cleaneduniverseid;
                                 }
 
-                                Console.WriteLine(timestamp +" "+ consolejoininfo);
+                                Console.WriteLine(timestamp + " " + consolejoininfo);
 
                             }
                             else if (line.Contains("Joining game '"))
@@ -335,8 +347,8 @@ class Program
                                     //just do it yourself.
                                     //lol my past me reasoning my skill issue
                                 }
-                                Console.Write(timestamp +" "+ consolejoininfo + ", JobID: " + jobid + "\n");
-                                
+                                Console.Write(timestamp + " " + consolejoininfo + ", JobID: " + jobid + "\n");
+
                                 try
                                 {
                                     int limit = 100;
@@ -391,7 +403,7 @@ class Program
                             }
                             else if (line.Contains("[FLog::Output]"))
                             {
-                                
+
                                 string flop = "[FLog::Output] ";
                                 string info = "Info: ";
 
@@ -437,7 +449,7 @@ class Program
                                     else
                                     {
                                         string marker = info;
-                                        
+
                                         int index = line.IndexOf(marker);
                                         if (index >= 0)
                                         {
@@ -565,6 +577,9 @@ class Program
                                     Environment.Exit(0);
                                     break;
                                 }
+                            } else if (line.Contains("[FLog::SingleSurfaceApp] destroy controllers")) {
+                                Environment.Exit(0);
+                                break; //it's a tradition for me idk why lol // NO MORE FISHSTRAP INTERGRATION RELIANCY :DDDDDD  cuz windows 11 broke it for me idk why :P
                             }
                         }
                         lastPosition = fs.Position;
@@ -638,9 +653,16 @@ class Program
 
                 } else if (command.ToLower() == "help")
                 {
-                    Console.WriteLine("help, rejoin (using gameid), job rejoin (means server rejoin), list places (places from the universeid), exit (to exit roblox and program)");
+                    Console.WriteLine("help, rejoin (using gameid), job rejoin (means server rejoin), list places (places from the universeid), exit (to exit roblox and program), list playerlist (self-explanitory)");
+                } else if (command.ToLower() == "list playerlist")
+                {
+                    foreach (string player in playerlist)
+                    {
+                        Console.WriteLine($"{player}");
+                    }
                 }
                     Process[] processes = Process.GetProcessesByName(targetProcessName);
+                // kinda legacy but still works so idc lol and it jacks up the amount of lines of code lol
                 if (allowrejoin == true)
                 {
                     foreach (Process proc in processes)
