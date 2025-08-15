@@ -24,7 +24,7 @@ class Program
     static bool iomessage = false;
     static readonly string targetProcessName = "RobloxPlayerBeta";
     static readonly HttpClient client = new HttpClient();
-    static readonly string version = " RTT production V1.5.0";
+    static readonly string version = "RTT internal V1.5.0+1";
     static bool skip = false;
     static bool printbool = false;
     static string localid = "";
@@ -126,7 +126,7 @@ class Program
 
             Console.Clear();
         await Task.Delay(1000);
-        Console.WriteLine("Running" + version);
+        Console.WriteLine("Running" +" "+ version);
         Console.WriteLine($"\n[Monitor] Now Displaying Log: {Path.GetFileName(currentLogFile)}\n\n");
         Console.WriteLine("Enter 'help' to get a list of commands (and sometimes an explanation).\n");
         static string ExtractBetweenMarkers(string text, char startMarker, char endMarker)
@@ -654,7 +654,7 @@ class Program
                 } else if (command.ToLower() == "help")
                 {
                     Console.WriteLine("help, rejoin (using gameid), job rejoin (means server rejoin), list places (places from the universeid), exit (to exit roblox and program), list playerlist (self-explanitory)");
-                } else if (command.ToLower() == "list playerlist")
+                } else if (command.ToLower() == "list players")
                 {
                     foreach (string player in playerlist)
                     {
