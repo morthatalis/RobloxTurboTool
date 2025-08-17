@@ -24,7 +24,7 @@ class Program
     static bool iomessage = false;
     static readonly string targetProcessName = "RobloxPlayerBeta";
     static readonly HttpClient client = new HttpClient();
-    static readonly string version = "RTT internal V1.5.0+1";
+    static readonly string version = "RTT internal V1.5.0+2";
     static bool skip = false;
     static bool printbool = false;
     static string localid = "";
@@ -597,10 +597,19 @@ class Program
         }
         static async Task whiletwo()
         {
+            //split string aka join place using roblox://
+            //string function = input.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries)[0];
+            //same here above change array val to 1, dont forget use proper clang array notation(aka 0 = 1), var name is arg(ig)... elseif(function == "join") {
+            //if (arg != null) { quit roblox and start another session using roblox://placeid= and ofc add the arg val}
+            //}
             
+
             while (true)
             {
                 string command = Console.ReadLine();
+                string function = command.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries)[0];
+                string arg = command.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries)[1];
+                Process[] processes = Process.GetProcessesByName(targetProcessName);
                 if (command == null)
                 {
                     command = "";
@@ -653,15 +662,34 @@ class Program
 
                 } else if (command.ToLower() == "help")
                 {
-                    Console.WriteLine("help, rejoin (using gameid), job rejoin (means server rejoin), list places (places from the universeid), exit (to exit roblox and program), list playerlist (self-explanitory)");
+                    Console.WriteLine("help, rejoin (using gameid), job rejoin (means server rejoin), list places (places from the universeid), exit (to exit roblox and program), list playerlist (self-explanitory), join [place] (uses the first argument as a placeid and joins it.)");
                 } else if (command.ToLower() == "list players")
                 {
                     foreach (string player in playerlist)
                     {
                         Console.WriteLine($"{player}");
                     }
+                } else if (function == "join")
+                {
+                    if (arg != null)
+                    {
+                        foreach (Process proc in processes)
+                        {
+                            Console.WriteLine($"Attempting to close process with ID: {proc.Id}");
+                            proc.Kill();
+                            Console.WriteLine($"{targetProcessName} has closed.");
+
+                            Process.Start(new ProcessStartInfo("cmd", $"/c start roblox://placeId={arg}") { CreateNoWindow = true });
+
+                            Environment.Exit(0);
+                            break;
+                        }
+                    }
+                        //elseif(function == "join") {
+                        //if (arg != null) { quit roblox and start another session using roblox://placeid= and ofc add the arg val}
+                        //}
                 }
-                    Process[] processes = Process.GetProcessesByName(targetProcessName);
+                
                 // kinda legacy but still works so idc lol and it jacks up the amount of lines of code lol
                 if (allowrejoin == true)
                 {
