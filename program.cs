@@ -607,8 +607,13 @@ class Program
             while (true)
             {
                 string command = Console.ReadLine();
-                string function = command.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries)[0];
-                string arg = command.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries)[1];
+                string function = "";
+                string arg = "";
+                if (command.Contains(' '))
+                {
+                    function = command.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries)[0];
+                    arg = command.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries)[1];
+                }
                 Process[] processes = Process.GetProcessesByName(targetProcessName);
                 if (command == null)
                 {
