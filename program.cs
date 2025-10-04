@@ -273,7 +273,7 @@ class Program
                                 string placeid = "placeid:";
                                 string userid = "userid:";
                                 string universeidtext = ", universeid:";
-
+                                printbool = true;
                                 int index = line.IndexOf(marker);
                                 int placeidindex = line.IndexOf(placeid);
                                 int useridindex = line.IndexOf(userid);
