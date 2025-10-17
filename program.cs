@@ -24,7 +24,7 @@ class Program
     static bool iomessage = false;
     static readonly string targetProcessName = "RobloxPlayerBeta";
     static readonly HttpClient client = new HttpClient();
-    static readonly string version = "RTT internal V1.5.0+2";
+    static readonly string version = "RTT production V1.7.0";
     static bool skip = false;
     static bool printbool = false;
     static string localid = "";
@@ -35,6 +35,7 @@ class Program
     static bool allowrejoin = false;
     static bool jobrejoin = false;
     static bool exit = false;
+    static string robloxfolder = "";
     static FileInfo? logFileInfo = null;
     static string currentLogFile = "";
     static long lastPosition = 0;
@@ -581,6 +582,45 @@ class Program
                                 Environment.Exit(0);
                                 break; //it's a tradition for me idk why lol // NO MORE FISHSTRAP INTERGRATION RELIANCY :DDDDDD  cuz windows 11 broke it for me idk why :P
                             }
+                            else if (line.Contains("[FLog::SingleSurfaceApp]"))
+                            {
+                                int index = line.IndexOf("[FLog::SingleSurfaceApp]");
+                                
+                                if (index >= 0)
+                                {
+                                    Console.WriteLine( line.Substring(index).TrimStart());
+                                }
+                            }
+                            else if (line.Contains("[FLog::SurfaceController]"))
+                            {
+                                int index = line.IndexOf("[FLog::SurfaceController]");
+                                
+                                if (index >= 0)
+                                {
+                                    Console.WriteLine(line.Substring(index).TrimStart());
+                                }
+                            }
+                            else if (line.Contains("[FLog::UpdateController] WindowsUpdateController: updaterFullPath: "))
+                            {
+                                string startMarker = "[FLog::UpdateController] WindowsUpdateController: updaterFullPath: ";
+                                string endMarker = "\\RobloxPlayerInstaller.exe";
+
+                                int startIndex = line.IndexOf(startMarker);
+                                int endIndex = line.IndexOf(endMarker);
+
+                                if (startIndex >= 0 && endIndex > startIndex)
+                                {
+                                    startIndex += startMarker.Length;
+                                    string result = line.Substring(startIndex, endIndex - startIndex).Trim();
+                                    Console.WriteLine("Found roblox folder: " + result);
+                                    robloxfolder = result;
+                                }
+                                else
+                                {
+                                    Console.WriteLine("Markers not found in the string.");
+                                }
+
+                            }
                         }
                         lastPosition = fs.Position;
                     }
@@ -667,7 +707,7 @@ class Program
 
                 } else if (command.ToLower() == "help")
                 {
-                    Console.WriteLine("help, rejoin (using gameid), job rejoin (means server rejoin), list places (places from the universeid), exit (to exit roblox and program), list playerlist (self-explanitory), join [place] (uses the first argument as a placeid and joins it.)");
+                    Console.WriteLine("help, rejoin (using gameid), job rejoin (means server rejoin), list places (places from the universeid), exit (to exit roblox and program), list playerlist (self-explanitory), join [place] (uses the first argument as a placeid and joins it.), patch corescript (patches roblox configs to error corescripts out, useful to remove topbar), unpatch corescript (self-explanitory)");
                 } else if (command.ToLower() == "list players")
                 {
                     foreach (string player in playerlist)
@@ -693,10 +733,18 @@ class Program
                         //elseif(function == "join") {
                         //if (arg != null) { quit roblox and start another session using roblox://placeid= and ofc add the arg val}
                         //}
+                } else if (command.ToLower() == "patch corescript")
+                {
+                    File.WriteAllText(robloxfolder + "\\content\\configs\\InExperiencePatchConfig\\InExperiencePatchConfig.json", "{\"AppStorageResetId\": \"0\", \"AssetId\": \"80471914653504\", \"AssetVersion\": \"4297\", \"IsForcedUpdate\": false, \"LocalAssetURI\": \"rbxasset://models/UniversalApp/UniversalApp.rbxm\", \"LocalAssetHash\": \"43b45664c86890781da847cb82ea794f\", \"MaxAppVersion\": \"695\"}");
+                    Console.WriteLine("Succesfully Patched! (rejoin to make it take effect)");
+                } else if (command.ToLower() == "unpatch corescript")
+                {
+                    File.WriteAllText(robloxfolder + "\\content\\configs\\InExperiencePatchConfig\\InExperiencePatchConfig.json", "{\"AppStorageResetId\": \"0\", \"AssetId\": \"80471914653504\", \"AssetVersion\": \"4297\", \"IsForcedUpdate\": false, \"LocalAssetURI\": \"rbxasset://models/InExperience/InExperience.rbxm\", \"LocalAssetHash\": \"43b45664c86890781da847cb82ea794f\", \"MaxAppVersion\": \"695\"}");
+                    Console.WriteLine("Succesfully Unpatched! (rejoin to make it take effect)");
                 }
-                
-                // kinda legacy but still works so idc lol and it jacks up the amount of lines of code lol
-                if (allowrejoin == true)
+
+            // kinda legacy but still works so idc lol and it jacks up the amount of lines of code lol
+            if (allowrejoin == true)
                 {
                     foreach (Process proc in processes)
                     {
@@ -704,25 +752,26 @@ class Program
                         Console.WriteLine($"Attempting to close process with ID: {proc.Id}");
                         proc.Kill();
                         Console.WriteLine($"{targetProcessName} has closed.");
-                        
+
                         Process.Start(new ProcessStartInfo("cmd", $"/c start roblox://placeId={gameid}") { CreateNoWindow = true });
-                       
+
                         Environment.Exit(0);
                         break;
                     }
-                } else if (jobrejoin == true)
+                }
+                else if (jobrejoin == true)
                 {
                     foreach (Process proc in processes)
                     {
                         Console.WriteLine(gameid);
-                    Console.WriteLine($"Attempting to close process with ID: {proc.Id}");
-                    proc.Kill();
-                    Console.WriteLine($"{targetProcessName} has closed.");
+                        Console.WriteLine($"Attempting to close process with ID: {proc.Id}");
+                        proc.Kill();
+                        Console.WriteLine($"{targetProcessName} has closed.");
 
-                    Process.Start(new ProcessStartInfo("cmd", $"/c start https://www.roblox.com/games/start?placeId={gameid}" + "&gameInstanceId="+jobid) { CreateNoWindow = true });
-                    
-                    Environment.Exit(0);
-                    break;
+                        Process.Start(new ProcessStartInfo("cmd", $"/c start https://www.roblox.com/games/start?placeId={gameid}" + "&gameInstanceId=" + jobid) { CreateNoWindow = true });
+
+                        Environment.Exit(0);
+                        break;
                     }
                 }
                 else if (exit == true)
