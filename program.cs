@@ -612,7 +612,7 @@ class Program
                                 {
                                     startIndex += startMarker.Length;
                                     string result = line.Substring(startIndex, endIndex - startIndex).Trim();
-                                    Console.WriteLine("Found roblox folder: " + result);
+                                    Console.WriteLine("Found roblox folder");
                                     robloxfolder = result;
                                 }
                                 else
